@@ -8,6 +8,7 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
+    "pyyaml (>=6.0.2,<7.0.0)"
 ]
 
 [tool.poetry]
@@ -25,3 +26,6 @@ requests = "^2.32.3"
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 120
