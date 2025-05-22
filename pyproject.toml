@@ -1,0 +1,27 @@
+[project]
+name = "study-case-20250521"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Rafael"}
+]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+]
+
+[tool.poetry]
+packages = [{include = "study_case_20250521", from = "src"}]
+
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.11.10"
+isort = "^6.0.1"
+
+
+[tool.poetry.group.bronze.dependencies]
+requests = "^2.32.3"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
