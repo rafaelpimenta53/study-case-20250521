@@ -26,3 +26,6 @@ venv/
 # Data
 data/
 *.parquet
+
+secrets/aws_accessKeys.csv
+.env

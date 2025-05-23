@@ -1,4 +1,0 @@
-# Global settings for the project
-local_data_path: "data"
-s3_bucket_name: "your-s3-bucket-name-placeholder" # TODO: Configure S3 bucket
-output_env: "local" # Can be "local" or "s3"
