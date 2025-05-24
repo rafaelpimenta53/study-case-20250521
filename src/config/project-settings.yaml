@@ -2,3 +2,4 @@
 local_data_path: "data"
 metadata_file_name: "breweries_metadata.json"
 brewery_page_filename_template: "breweries_page_{page_number}.json"
+last_run_metadata_bronze: "last_run_metadata.json"

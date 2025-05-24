@@ -24,6 +24,9 @@ There will be 3 main python programs:
         - gold/
             - __init__.py
             - main.py
+        - config/
+            - cloud-resources.json
+            - project-settings.yaml
     ```
 
 
