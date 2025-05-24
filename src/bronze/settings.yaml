@@ -1,7 +1,10 @@
 api_url: "https://api.openbrewerydb.org/v1/breweries?per_page=20&page=20&sort=id:asc"
+meta_url: "https://api.openbrewerydb.org/v1/breweries/meta"
 api_param_itens_per_page: 200
 api_param_sort_by: "id:asc"
-api_header_from: "study-case-20250521"
-api_request_delay_seconds: 1
-api_request_retry_delay_seconds: 3 #Time to wait before retrying a failed request
+api_request_delay_seconds: 1 # Time to wait after a successful request
+api_request_retry_delay_seconds: 3 # Time to wait before retrying a failed request
 api_request_max_retries: 5
+api_request_header:
+  From: "study-case-20250521"
+  Accept: "application/json"

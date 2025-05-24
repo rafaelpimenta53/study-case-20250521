@@ -1,3 +1,4 @@
 # Global settings for the project
 local_data_path: "data"
-output_env: "s3" # Can be "local" or "s3"
+metadata_file_name: "breweries_metadata.json"
+brewery_page_filename_template: "breweries_page_{page_number}.json"
