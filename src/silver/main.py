@@ -1,9 +1,7 @@
 import boto3
 import duckdb
-from datetime import datetime
 import logging
 import os
-import glob
 import json
 import yaml
 
@@ -67,88 +65,208 @@ def validate_table_schema(table_name, expected_schema):
         )
 
     logger.info(f"Schema validation for {table_name} passed.")
+    duckdb.sql(f"SELECT * FROM {table_name}").show()
     return None
 
 
-# Define expected bronze schema for later validation
-BRONZE_SCHEMA = {
-    "id": "UUID",
-    "name": "VARCHAR",
-    "brewery_type": "VARCHAR",
-    "address_1": "VARCHAR",
-    "address_2": "VARCHAR",
-    "address_3": "VARCHAR",
-    "city": "VARCHAR",
-    "state_province": "VARCHAR",
-    "postal_code": "VARCHAR",
-    "country": "VARCHAR",
-    "longitude": "DOUBLE",
-    "latitude": "DOUBLE",
-    "phone": "VARCHAR",
-    "website_url": "VARCHAR",
-    "state": "VARCHAR",
-    "street": "VARCHAR",
-}
+def test_bronze_silver_sync(silver_table_name="silver_data", bronze_table_name="bronze_data"):
+    """
+    Test function to validate bronze and silver data synchronization logic.
+    """
+    # Test scenario 1: Remove some records from silver to test INSERT
+    duckdb.sql(f"DELETE FROM {silver_table_name} WHERE id IN (SELECT id FROM {silver_table_name} LIMIT 2)")
+    logger.info("Removed 2 records from silver to test INSERT")
 
-SILVER_SCHEMA_BASE = {**BRONZE_SCHEMA, "created_at": "TIMESTAMP", "updated_at": "TIMESTAMP", "deleted_at": "TIMESTAMP"}
-
-
-# read data from bronze
-def get_last_bronze_run_directory(cloud_resources, global_settings):
-    """Get the last bronze run directory from S3."""
-    s3_client = boto3.client("s3")
-    s3_bucket = cloud_resources["s3_bucket_name"]
-    s3_key = os.path.join("bronze", global_settings["last_run_metadata_bronze"])
-    s3_client.download_file(s3_bucket, s3_key, "last_run_metadata_bronze.json")
-    with open("last_run_metadata_bronze.json", "r") as f:
-        last_run_metadata = json.load(f)
-    last_run_directory = last_run_metadata["last_run_directory"]
-    last_run_complete_directory = os.path.join("bronze", last_run_directory)
-    return last_run_complete_directory
-
-
-global_settings, cloud_resources = load_all_settings()
-last_run_complete_directory = get_last_bronze_run_directory(cloud_resources, global_settings)
-bronze_files_path = os.path.join(
-    "s3://", cloud_resources["s3_bucket_name"], last_run_complete_directory, "breweries_page_*.json"
-)
-silver_files_path = os.path.join("s3://", cloud_resources["s3_bucket_name"], "silver", "current_values", "*.parquet")
-print(f"Last run complete directory: {bronze_files_path}")
-
-# # read all bronze files
-# duckdb_conn = duckdb.connect(database=":memory:")
-# duckdb_conn.execute(f"""
-#     CREATE TABLE bronze_data AS
-#     SELECT * FROM read_json('{bronze_files_path}', ignore_errors=true);
-# """)
-# duckdb_conn.execute("SELECT * FROM bronze_data").show()
-
-
-duckdb.sql(f"""
-    CREATE TABLE bronze_data AS
-    SELECT * FROM read_json('{bronze_files_path}', ignore_errors=true);
-""")
-duckdb.sql("SELECT * FROM bronze_data").show()
-
-try:
+    # Test scenario 2: Update some fields in silver to test UPDATE
     duckdb.sql(f"""
-        CREATE TABLE silver_data AS
-        SELECT * FROM read_parquet('{silver_files_path}');
+        UPDATE {silver_table_name} 
+        SET name = 'TEST_UPDATED_' || name,
+            state = 'TEST_STATE_' || state,
+        WHERE id IN (SELECT id FROM {silver_table_name} LIMIT 2)
     """)
-except duckdb.duckdb.IOException:
-    print("No existing silver data found. Creating new silver data.")
-    duckdb.sql("""
+    logger.info("Updated 2 records in silver to test UPDATE")
+
+    # Test scenario 3: Remove some records from bronze to test SOFT DELETE
+    duckdb.sql(f"DELETE FROM {bronze_table_name} WHERE id IN (SELECT id FROM {silver_table_name} LIMIT 2 OFFSET 5)")
+    logger.info("Removed 2 records from bronze to test SOFT DELETE")
+
+    # Test scenario 4: Mark some records as deleted in silver to test REINSTATEMENT
+    duckdb.sql(f"""
+        UPDATE {silver_table_name} 
+        SET deleted_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id IN (SELECT id FROM {bronze_table_name} LIMIT 3 OFFSET 12)
+    """)
+    logger.info("Marked 3 records as deleted in silver to test REINSTATEMENT")
+
+
+class S3Manager:
+    def __init__(self, cloud_resources, global_settings):
+        self.s3_client = boto3.client("s3")
+        self.bucket_name = cloud_resources["s3_bucket_name"]
+        self.last_run_metadata_bronze_path = global_settings["last_run_metadata_bronze_path"]
+
+    def get_last_bronze_run_directory(self):
+        """Get the last bronze run directory from S3."""
+        s3_client = boto3.client("s3")
+        s3_key = os.path.join("bronze", self.last_run_metadata_bronze_path)
+        s3_client.download_file(self.bucket_name, s3_key, "last_run_metadata_bronze_path.json")
+        with open("last_run_metadata_bronze_path.json", "r") as f:
+            last_run_metadata = json.load(f)
+        last_run_directory = last_run_metadata["last_run_directory"]
+        last_run_complete_directory = os.path.join("bronze", last_run_directory)
+        return last_run_complete_directory
+
+    def delete_silver_files(self):
+        """Delete all files in the silver directory."""
+        s3_client = boto3.client("s3")
+        prefix = os.path.join("silver", "current_values")
+        while True:
+            response = s3_client.list_objects_v2(Bucket=self.bucket_name, Prefix=prefix)
+            if "Contents" in response:
+                s3_client.delete_objects(
+                    Bucket=self.bucket_name,
+                    Delete={
+                        "Objects": [{"Key": obj["Key"]} for obj in response["Contents"]],
+                        "Quiet": False,
+                    },
+                )
+            else:
+                break
+
+
+def read_data_from_bronze_and_silver(bronze_files_path, silver_files_path_to_read):
+    print(f"Last run complete directory: {bronze_files_path}")
+    duckdb.sql(f"""
+            CREATE TABLE bronze_data AS
+            SELECT * FROM read_json('{bronze_files_path}') LIMIT 20; 
+        """)  ## TODO: remove limit
+
+    try:
+        duckdb.sql(f"""
+            CREATE TABLE silver_data AS
+            SELECT * FROM read_parquet('{silver_files_path_to_read}', hive_partitioning = true);
+        """)
+    except duckdb.duckdb.IOException:
+        print("No existing silver data found. Creating new silver data.")
+        duckdb.sql("""
             CREATE TABLE silver_data AS
             SELECT *
             FROM bronze_data
-            LIMIT 5;""")  # TODO: remove limit 5
-    duckdb.sql("""
-        ALTER TABLE silver_data ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
-        ALTER TABLE silver_data ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
-        ALTER TABLE silver_data ADD COLUMN deleted_at TIMESTAMP DEFAULT NULL;
-    """)
-    # silver_data = duckdb.sql(""" SELECT * FROM silver_data;""")
+            LIMIT 20;""")  # TODO: remove limit
+        duckdb.sql("""
+            ALTER TABLE silver_data ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+            ALTER TABLE silver_data ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+            ALTER TABLE silver_data ADD COLUMN deleted_at TIMESTAMP DEFAULT NULL;
+        """)
 
-duckdb.sql("SELECT * FROM silver_data").show()
-validate_table_schema("bronze_data", BRONZE_SCHEMA)
-validate_table_schema("silver_data", SILVER_SCHEMA_BASE)
+
+def get_diff_between_bronze_and_silver(str_columns_to_select, str_columns_to_compare):
+    duckdb.sql(f"""
+        CREATE TABLE silver_bronze_diff AS
+        SELECT COALESCE(b.id, s.id) AS id
+            ,{str_columns_to_select}
+            ,(CASE WHEN s.id IS NULL THEN true ELSE false END) AS __new_record
+            ,(CASE WHEN b.id IS NULL AND s.deleted_at IS NULL THEN true ELSE false END) AS __deleted_record
+            ,(CASE WHEN b.id IS NOT NULL AND s.deleted_at IS NOT NULL THEN true ELSE false END) AS __reinserted_record
+            ,(CASE WHEN b.id IS NOT NULL AND s.id IS NOT NULL AND s.deleted_at IS NULL THEN true ELSE false END) AS __updated_record
+        FROM bronze_data b
+        FULL OUTER JOIN silver_data s ON b.id = s.id
+        WHERE 
+            b.id IS NULL 
+            OR s.id IS NULL 
+            OR (b.id IS NOT NULL AND s.deleted_at IS NOT NULL)
+            OR ({str_columns_to_compare})
+    """)
+
+    logger.info("Diff between bronze and silver:")
+    duckdb.sql("SELECT * FROM silver_bronze_diff").show()
+
+    if duckdb.sql("SELECT COUNT(*) FROM silver_bronze_diff").fetchone()[0] == 0:
+        logger.info("No changes detected between bronze and silver data. Exiting.")
+        exit(0)
+
+
+def update_silver_data_duckdb_table(str_columns_to_select, str_columns_to_update):
+    duckdb.sql(f"""
+            -- Insert new records into silver
+            INSERT INTO silver_data
+            (id, {str_columns_to_select.replace("b.", "")})
+            SELECT b.id, {str_columns_to_select}
+            FROM silver_bronze_diff b
+            WHERE b.__new_record = true;
+
+            -- Update existing records in silver
+            UPDATE silver_data
+            SET updated_at = CURRENT_TIMESTAMP,
+                {str_columns_to_update}
+            FROM silver_bronze_diff b
+            WHERE silver_data.id = b.id
+            AND b.__updated_record = true;
+
+            -- Soft delete records in silver
+            UPDATE silver_data
+            SET updated_at = CURRENT_TIMESTAMP,
+                deleted_at = CURRENT_TIMESTAMP
+            FROM silver_bronze_diff b
+            WHERE silver_data.id = b.id
+            AND b.__deleted_record = true
+            AND silver_data.deleted_at IS NULL;
+
+            -- Reinserted records in silver
+            UPDATE silver_data
+            SET updated_at = CURRENT_TIMESTAMP,
+                deleted_at = NULL,
+                {str_columns_to_update}
+            FROM silver_bronze_diff b
+            WHERE silver_data.id = b.id
+            AND b.__reinserted_record = true;
+
+    """)
+
+
+def export_silver_data_to_storage(s3_manager, silver_files_path_to_write):
+    # DuckDB COPY command does not delete old files, sometimes overwriting only is not enough
+    s3_manager.delete_silver_files()
+    duckdb.sql(f"""
+        COPY silver_data TO '{silver_files_path_to_write}'
+        (FORMAT parquet, PARTITION_BY (country, state, city), OVERWRITE_OR_IGNORE);
+        """)
+
+    duckdb.sql("SELECT COUNT(*) as Number_of_Records_in_Silver_Data FROM silver_data").show()
+
+
+def run_silver_pipeline():
+    # Setting up constant values
+
+    # File paths
+    global_settings, cloud_resources = load_all_settings()
+    s3_manager = S3Manager(cloud_resources, global_settings)
+    last_run_complete_directory = s3_manager.get_last_bronze_run_directory()
+    bronze_files_path = os.path.join(
+        "s3://", cloud_resources["s3_bucket_name"], last_run_complete_directory, "breweries_page_*.json"
+    )
+    silver_files_path_to_write = os.path.join("s3://", cloud_resources["s3_bucket_name"], "silver", "current_values")
+    silver_files_path_to_read = os.path.join(silver_files_path_to_write, "*", "*", "*", "*.parquet")
+
+    # Schemas
+    bronze_schema = global_settings["expected_bronze_schema"]
+    silver_schema = {**bronze_schema, "created_at": "TIMESTAMP", "updated_at": "TIMESTAMP", "deleted_at": "TIMESTAMP"}
+    columns_to_compare = [key for key in bronze_schema.keys() if key not in ["id"]]
+    str_columns_to_select = ", ".join([f"b.{col}" for col in columns_to_compare])
+    str_columns_to_compare = " OR ".join([f"b.{col} IS DISTINCT FROM s.{col}" for col in columns_to_compare])
+    str_columns_to_update = ", ".join([f"{col} = b.{col}" for col in columns_to_compare])
+
+    # Main pipeline
+    read_data_from_bronze_and_silver(bronze_files_path, silver_files_path_to_read)
+    validate_table_schema("bronze_data", bronze_schema)
+    validate_table_schema("silver_data", silver_schema)
+    get_diff_between_bronze_and_silver(str_columns_to_select, str_columns_to_compare)
+    update_silver_data_duckdb_table(str_columns_to_select, str_columns_to_update)
+    export_silver_data_to_storage(s3_manager, silver_files_path_to_write)
+
+    logging.info("Silver data written to S3. Pipeline completed successfully.")
+
+
+if __name__ == "__main__":
+    run_silver_pipeline()

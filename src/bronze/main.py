@@ -4,7 +4,6 @@ import math
 import os
 import time
 from datetime import datetime
-from zoneinfo import ZoneInfo
 
 import boto3
 import requests
@@ -58,9 +57,9 @@ class APIRequestHandler:
 
 class DataSaver:
     def __init__(self, global_settings, cloud_resources):
-        self.run_timestamp = datetime.now(ZoneInfo("America/Sao_Paulo")).strftime("%Y%m%d-%H%M%S")
+        self.run_timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         logger.info(f"Run timestamp for DataSaver: {self.run_timestamp}")
-        self.last_run_metadata_bronze = global_settings["last_run_metadata_bronze"]
+        self.last_run_metadata_bronze_path = global_settings["last_run_metadata_bronze_path"]
 
         self.output_env = os.environ["OUTPUT_ENV"]
         if self.output_env == "local":
@@ -106,13 +105,12 @@ class DataSaver:
 
         if self.output_env == "local":
             bronze_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "data", "bronze"))
-            os.makedirs(bronze_dir, exist_ok=True)
-            metadata_file_path = os.path.join(bronze_dir, self.last_run_metadata_bronze)
+            metadata_file_path = os.path.join(bronze_dir, self.last_run_metadata_bronze_path)
             with open(metadata_file_path, "w") as f:
                 json.dump(metadata, f, indent=4)
             logger.info(f"Saved last run metadata to {metadata_file_path}")
         elif self.output_env == "s3":
-            s3_key = os.path.join("bronze", self.last_run_metadata_bronze)
+            s3_key = os.path.join("bronze", self.last_run_metadata_bronze_path)
             self.s3_client.put_object(
                 Bucket=self.s3_bucket, Key=s3_key, Body=json.dumps(metadata, indent=4), ContentType="application/json"
             )

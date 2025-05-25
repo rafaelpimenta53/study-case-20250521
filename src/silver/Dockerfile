@@ -21,7 +21,7 @@ RUN pip install poetry
 RUN poetry config virtualenvs.create false
 
 # Install dependencies (use --no-root to skip installing the current project)
-RUN poetry install --with bronze --no-root
+RUN poetry install --with silver --no-root
 
 # Copy source code
 COPY src/ ./src/
@@ -31,4 +31,4 @@ ENV PYTHONPATH=/app/src
 ENV PYTHONUNBUFFERED=1
 
 # Run the bronze pipeline
-CMD ["python", "src/bronze/main.py"]
+CMD ["python", "src/silver/main.py"]

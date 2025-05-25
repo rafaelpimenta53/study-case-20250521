@@ -29,3 +29,8 @@ data/
 
 secrets/aws_accessKeys.csv
 .env
+
+#Airflow
+logs/
+config/
+plugins/

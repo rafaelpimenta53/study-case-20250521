@@ -8,9 +8,13 @@ output "cluster_arn" {
   value       = aws_ecs_cluster.main.arn
 }
 
-output "task_execution_role_arn" {
-  description = "ARN of the ECS task execution role"
-  value       = aws_iam_role.ecs_task_execution_role.arn
+output "task_definitions" {
+  description = "Task definition ARNs"
+  value = {
+    bronze = aws_ecs_task_definition.bronze.arn
+    # silver = aws_ecs_task_definition.silver.arn
+    # gold   = aws_ecs_task_definition.gold.arn
+  }
 }
 
 output "task_role_arn" {
