@@ -136,11 +136,11 @@ class S3Manager:
 
 
 def read_data_from_bronze_and_silver(bronze_files_path, silver_files_path_to_read):
-    print(f"Last run complete directory: {bronze_files_path}")
+    logging.info(f"Last run complete directory: {bronze_files_path}")
     duckdb.sql(f"""
             CREATE TABLE bronze_data AS
-            SELECT * FROM read_json('{bronze_files_path}') LIMIT 20; 
-        """)  ## TODO: remove limit
+            SELECT * FROM read_json('{bronze_files_path}'); 
+        """)
 
     try:
         duckdb.sql(f"""
@@ -148,12 +148,11 @@ def read_data_from_bronze_and_silver(bronze_files_path, silver_files_path_to_rea
             SELECT * FROM read_parquet('{silver_files_path_to_read}', hive_partitioning = true);
         """)
     except duckdb.duckdb.IOException:
-        print("No existing silver data found. Creating new silver data.")
+        logging.info("No existing silver data found. Creating new silver data.")
         duckdb.sql("""
             CREATE TABLE silver_data AS
             SELECT *
-            FROM bronze_data
-            LIMIT 20;""")  # TODO: remove limit
+            FROM bronze_data;""")
         duckdb.sql("""
             ALTER TABLE silver_data ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
             ALTER TABLE silver_data ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;

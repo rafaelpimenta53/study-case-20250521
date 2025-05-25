@@ -165,9 +165,9 @@ def run_bronze_pipeline():
         page_file_name = global_settings["brewery_page_filename_template"].format(page_number=page)
         data_saver.save_text(data=page_data_raw, file_name=page_file_name)
 
-        if page >= 3:
-            logger.info("Fetched 3 pages. Stopping further requests to avoid overloading the API.")
-            break
+        # if page >= 3:
+        #     logger.info("Fetched 3 pages. Stopping further requests to avoid overloading the API.")
+        #     break
 
         time.sleep(bronze_settings.get("api_request_delay_seconds", 1))
 
