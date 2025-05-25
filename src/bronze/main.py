@@ -26,10 +26,7 @@ def load_all_settings():
     with open(global_settings_path, "r") as f:
         global_s = yaml.safe_load(f)
 
-    cloud_resources_path = os.path.join(os.path.dirname(__file__), "..", "config", "cloud-resources.json")
-    with open(cloud_resources_path, "r") as f:
-        cloud_res = json.load(f)
-    return bronze_s, global_s, cloud_res
+    return bronze_s, global_s
 
 
 class APIRequestHandler:
@@ -56,7 +53,7 @@ class APIRequestHandler:
 
 
 class DataSaver:
-    def __init__(self, global_settings, cloud_resources):
+    def __init__(self, global_settings):
         self.run_timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
         logger.info(f"Run timestamp for DataSaver: {self.run_timestamp}")
         self.last_run_metadata_bronze_path = global_settings["last_run_metadata_bronze_path"]
@@ -72,7 +69,7 @@ class DataSaver:
             logger.info(f"Local data directory prepared: {self.base_local_path}")
         elif self.output_env == "s3":
             self.s3_client = boto3.client("s3")
-            self.s3_bucket = cloud_resources["s3_bucket_name"]
+            self.s3_bucket = os.environ["S3_BUCKET_NAME"]
             self.base_s3_key_prefix = f"bronze/{self.run_timestamp}"
             logger.info(f"Using S3 bucket: {self.s3_bucket}, base key prefix for this run: {self.base_s3_key_prefix}")
         else:
@@ -121,8 +118,8 @@ def run_bronze_pipeline():
     """Main function to run the Bronze pipeline."""
     logger.info("Starting the Bronze pipeline...")
 
-    bronze_settings, global_settings, cloud_resources = load_all_settings()
-    data_saver = DataSaver(global_settings=global_settings, cloud_resources=cloud_resources)
+    bronze_settings, global_settings = load_all_settings()
+    data_saver = DataSaver(global_settings=global_settings)
     api_handler = APIRequestHandler(bronze_settings=bronze_settings)
 
     logger.info("Fetching metadata...")

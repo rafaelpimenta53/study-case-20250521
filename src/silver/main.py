@@ -19,10 +19,7 @@ def load_all_settings():
     with open(global_settings_path, "r") as f:
         global_s = yaml.safe_load(f)
 
-    cloud_resources_path = os.path.join(os.path.dirname(__file__), "..", "config", "cloud-resources.json")
-    with open(cloud_resources_path, "r") as f:
-        cloud_res = json.load(f)
-    return global_s, cloud_res
+    return global_s
 
 
 def validate_table_schema(table_name, expected_schema):
@@ -101,9 +98,9 @@ def test_bronze_silver_sync(silver_table_name="silver_data", bronze_table_name="
 
 
 class S3Manager:
-    def __init__(self, cloud_resources, global_settings):
+    def __init__(self, global_settings):
         self.s3_client = boto3.client("s3")
-        self.bucket_name = cloud_resources["s3_bucket_name"]
+        self.bucket_name = os.environ["S3_BUCKET_NAME"]
         self.last_run_metadata_bronze_path = global_settings["last_run_metadata_bronze_path"]
 
     def get_last_bronze_run_directory(self):
@@ -152,7 +149,8 @@ def read_data_from_bronze_and_silver(bronze_files_path, silver_files_path_to_rea
         duckdb.sql("""
             CREATE TABLE silver_data AS
             SELECT *
-            FROM bronze_data;""")
+            FROM bronze_data
+            LIMIT 0;""")
         duckdb.sql("""
             ALTER TABLE silver_data ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
             ALTER TABLE silver_data ADD COLUMN updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
@@ -226,11 +224,15 @@ def update_silver_data_duckdb_table(str_columns_to_select, str_columns_to_update
 
 def export_silver_data_to_storage(s3_manager, silver_files_path_to_write):
     # DuckDB COPY command does not delete old files, sometimes overwriting only is not enough
+    logging.info(f"Deleting old files from {silver_files_path_to_write}")
     s3_manager.delete_silver_files()
+    logging.info("Old Files deleted")
     duckdb.sql(f"""
         COPY silver_data TO '{silver_files_path_to_write}'
-        (FORMAT parquet, PARTITION_BY (country, state, city), OVERWRITE_OR_IGNORE);
+        (FORMAT parquet, PARTITION_BY (city), OVERWRITE_OR_IGNORE);
         """)
+    # If you want to set location as country, state and city, you can use the following line
+    # (FORMAT parquet, PARTITION_BY (country, state, city), OVERWRITE_OR_IGNORE);
 
     duckdb.sql("SELECT COUNT(*) as Number_of_Records_in_Silver_Data FROM silver_data").show()
 
@@ -239,14 +241,14 @@ def run_silver_pipeline():
     # Setting up constant values
 
     # File paths
-    global_settings, cloud_resources = load_all_settings()
-    s3_manager = S3Manager(cloud_resources, global_settings)
+    global_settings = load_all_settings()
+    s3_manager = S3Manager(global_settings)
     last_run_complete_directory = s3_manager.get_last_bronze_run_directory()
     bronze_files_path = os.path.join(
-        "s3://", cloud_resources["s3_bucket_name"], last_run_complete_directory, "breweries_page_*.json"
+        "s3://", os.environ["S3_BUCKET_NAME"], last_run_complete_directory, "breweries_page_*.json"
     )
-    silver_files_path_to_write = os.path.join("s3://", cloud_resources["s3_bucket_name"], "silver", "current_values")
-    silver_files_path_to_read = os.path.join(silver_files_path_to_write, "*", "*", "*", "*.parquet")
+    silver_files_path_to_write = os.path.join("s3://", os.environ["S3_BUCKET_NAME"], "silver", "current_values")
+    silver_files_path_to_read = os.path.join(silver_files_path_to_write, "*", "*.parquet")
 
     # Schemas
     bronze_schema = global_settings["expected_bronze_schema"]

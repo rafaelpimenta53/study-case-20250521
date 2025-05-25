@@ -7,14 +7,6 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(
 logger = logging.getLogger(__name__)
 
 
-def load_all_settings():
-    """Loads all necessary configuration files."""
-    cloud_resources_path = os.path.join(os.path.dirname(__file__), "..", "config", "cloud-resources.json")
-    with open(cloud_resources_path, "r") as f:
-        cloud_res = json.load(f)
-    return cloud_res
-
-
 def read_silver_layer(silver_files_path):
     duckdb.sql(f"""
             CREATE TABLE silver_data AS
@@ -58,11 +50,10 @@ def export_gold_tables(gold_files_path):
 
 
 def run_gold_pipeline():
-    cloud_resources = load_all_settings()
     silver_files_path = os.path.join(
-        "s3://", cloud_resources["s3_bucket_name"], "silver", "current_values", "*", "*", "*", "*.parquet"
+        "s3://", os.environ["S3_BUCKET_NAME"], "silver", "current_values", "*", "*", "*", "*.parquet"
     )
-    gold_files_path = os.path.join("s3://", cloud_resources["s3_bucket_name"], "gold")
+    gold_files_path = os.path.join("s3://", os.environ["S3_BUCKET_NAME"], "gold")
 
     read_silver_layer(silver_files_path)
     create_gold_tables()
