@@ -27,7 +27,9 @@ def create_gold_tables():
                 city,
                 COUNT(*) AS total_count
             FROM silver_data
-            GROUP BY country, state, city;
+               WHERE deleted_at IS NOT NULL
+            --GROUP BY country, state, city;
+            GROUP BY city;
         """)
 
     # Agregated table by type
@@ -37,6 +39,7 @@ def create_gold_tables():
                 brewery_type,
                 COUNT(*) AS total_count
             FROM silver_data
+               WHERE deleted_at IS NOT NULL
             GROUP BY brewery_type;
         """)
     duckdb.sql("SELECT * FROM gold_data_location").show()
