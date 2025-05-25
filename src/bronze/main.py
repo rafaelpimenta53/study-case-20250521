@@ -78,18 +78,12 @@ class DataSaver:
     def save_text(self, data, file_name):
         """Saves raw text data to local disk or S3 using pre-configured paths."""
         if self.output_env == "local":
-            if not self.base_local_path:
-                logger.error("Base local path not configured for local saving.")
-                return
             local_file_path = os.path.join(self.base_local_path, file_name)
             os.makedirs(os.path.dirname(local_file_path), exist_ok=True)
             with open(local_file_path, "w") as f:
                 f.write(data)
             logger.info(f"Saved data to {local_file_path}")
         elif self.output_env == "s3":
-            if not self.s3_client or not self.s3_bucket or not self.base_s3_key_prefix:
-                logger.error("S3 client, bucket, or base key prefix not configured for S3 saving.")
-                return
             s3_key = f"{self.base_s3_key_prefix}/{file_name}"
             self.s3_client.put_object(Bucket=self.s3_bucket, Key=s3_key, Body=data, ContentType="text/plain")
             logger.info(f"Saved data to S3: s3://{self.s3_bucket}/{s3_key}")

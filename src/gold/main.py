@@ -1,7 +1,11 @@
-import duckdb
+import json
 import logging
 import os
-import json
+
+import duckdb
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -51,7 +55,7 @@ def export_gold_tables(gold_files_path):
 
 def run_gold_pipeline():
     silver_files_path = os.path.join(
-        "s3://", os.environ["S3_BUCKET_NAME"], "silver", "current_values", "*", "*", "*", "*.parquet"
+        "s3://", os.environ["S3_BUCKET_NAME"], "silver", "current_values", "*", "*.parquet"
     )
     gold_files_path = os.path.join("s3://", os.environ["S3_BUCKET_NAME"], "gold")
 

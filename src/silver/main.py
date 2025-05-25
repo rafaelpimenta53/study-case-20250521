@@ -1,9 +1,13 @@
-import boto3
-import duckdb
+import json
 import logging
 import os
-import json
+
+import boto3
+import duckdb
 import yaml
+from dotenv import load_dotenv
+
+load_dotenv()
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
@@ -107,9 +111,8 @@ class S3Manager:
         """Get the last bronze run directory from S3."""
         s3_client = boto3.client("s3")
         s3_key = os.path.join("bronze", self.last_run_metadata_bronze_path)
-        s3_client.download_file(self.bucket_name, s3_key, "last_run_metadata_bronze_path.json")
-        with open("last_run_metadata_bronze_path.json", "r") as f:
-            last_run_metadata = json.load(f)
+        response = s3_client.get_object(Bucket=self.bucket_name, Key=s3_key)
+        last_run_metadata = json.loads(response["Body"].read().decode("utf-8"))
         last_run_directory = last_run_metadata["last_run_directory"]
         last_run_complete_directory = os.path.join("bronze", last_run_directory)
         return last_run_complete_directory
