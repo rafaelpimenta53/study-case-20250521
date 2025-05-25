@@ -1,5 +1,4 @@
-terraform -chdir=terraform init
-terraform -chdir=terraform apply
+
 
 sudo service docker start
 sudo docker build -f src/bronze/Dockerfile -t study-case-20250521-bronze-pipeline .
@@ -16,3 +15,7 @@ sudo docker compose up -d
 # sudo docker run --env-file .env study-case-20250521-bronze-pipeline
 # sudo docker run --env-file .env study-case-20250521-silver-pipeline
 # sudo docker run --env-file .env study-case-20250521-gold-pipeline
+
+# Commands to create buckets automatically:
+# terraform -chdir=terraform init
+# terraform -chdir=terraform apply
