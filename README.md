@@ -15,7 +15,14 @@
 6. [Sample Results](#sample-results)
    
 
-This project implements a complete data pipeline following the **medallion architecture** (Bronze, Silver, Gold layers) to process brewery data from the Open Brewery DB API. The pipeline demonstrates modern data engineering practices using Python, Docker, AWS S3, and orchestration with Apache Airflow.
+This project implements a complete data pipeline following the **medallion architecture** (Bronze, Silver, Gold layers) to process brewery data from the Open Brewery DB API. The pipeline demonstrates modern data engineering practices.
+
+### Stack Used:
+
+- **Python and DuckDB** – Data collection and transformation
+- **Docker** – Containerization of each stage
+- **AWS S3** – Data storage
+- **Apache Airflow** – Workflow scheduling and orchestration
 
 ## Goal of the Application
 
