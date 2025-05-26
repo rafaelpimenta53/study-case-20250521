@@ -11,48 +11,55 @@ logger = logging.getLogger(__name__)
 
 
 def read_silver_layer(silver_files_path):
+    logging.info(f"Reading silver layer from: {silver_files_path}")
     duckdb.sql(f"""
             CREATE TABLE silver_data AS
             SELECT * FROM read_parquet('{silver_files_path}', hive_partitioning = true); 
         """)
+    logging.info("Silver layer data loaded successfully")
 
 
 def create_gold_tables():
+    logging.info("Creating gold_data_location table")
     duckdb.sql("""
             CREATE TABLE gold_data_location AS
             SELECT 
-                country,
+                --country,
                 state,
-                city,
+                --city,
                 COUNT(*) AS total_count
             FROM silver_data
-               WHERE deleted_at IS NOT NULL
+               WHERE deleted_at IS NULL
             --GROUP BY country, state, city;
-            GROUP BY city;
+            GROUP BY state;
         """)
+    logging.info("Table gold_data_location created successfully")
 
-    # Agregated table by type
+    logging.info("Creating gold_data_brewery_type table")
     duckdb.sql("""
             CREATE TABLE gold_data_brewery_type AS
             SELECT 
                 brewery_type,
                 COUNT(*) AS total_count
             FROM silver_data
-               WHERE deleted_at IS NOT NULL
+               WHERE deleted_at IS NULL
             GROUP BY brewery_type;
         """)
+    logging.info("Table gold_data_brewery_type created successfully")
+
     duckdb.sql("SELECT * FROM gold_data_location").show()
     duckdb.sql("SELECT * FROM gold_data_brewery_type").show()
 
 
 def export_gold_tables(gold_files_path):
-    # Export to parquet
+    logging.info(f"Exporting gold tables to: {gold_files_path}")
     duckdb.sql(f"""
             COPY (SELECT * FROM gold_data_location) TO '{gold_files_path}/location.parquet' (FORMAT PARQUET);
         """)
     duckdb.sql(f"""
             COPY (SELECT * FROM gold_data_brewery_type) TO '{gold_files_path}/brewery_type.parquet' (FORMAT PARQUET);
         """)
+    logger.info("Gold tables created and exported successfully.")
 
 
 def run_gold_pipeline():
@@ -64,7 +71,6 @@ def run_gold_pipeline():
     read_silver_layer(silver_files_path)
     create_gold_tables()
     export_gold_tables(gold_files_path)
-    logger.info("Gold tables created and exported successfully.")
 
 
 if __name__ == "__main__":

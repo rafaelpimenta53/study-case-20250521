@@ -231,32 +231,10 @@ def export_silver_data_to_storage(s3_manager, silver_files_path_to_write):
     s3_manager.delete_silver_files()
     logging.info("Old Files deleted")
 
-    local_temp_dir = "./src/silver/temp/"
     duckdb.sql(f"""
-        COPY silver_data TO '{local_temp_dir}'
-        (FORMAT parquet, PARTITION_BY (city), OVERWRITE_OR_IGNORE);
+        COPY silver_data TO '{silver_files_path_to_write}'
+        (FORMAT parquet, PARTITION_BY (state), OVERWRITE_OR_IGNORE);
         """)
-
-    s3_key_prefix = silver_files_path_to_write.replace("s3://", "").replace(f"{s3_manager.bucket_name}/", "")
-    logging.info(f"Exporting silver data to S3: {s3_key_prefix}")
-    # Upload all files from local temp directory to S3
-
-    for dir_number, (root, dirs, files) in enumerate(os.walk(local_temp_dir)):
-        if dir_number % 100 == 0:
-            logging.info(f"Processing directory {dir_number}: {root}")
-        for file in files:
-            if file.endswith(".parquet"):
-                local_file_path = os.path.join(root, file)
-                # Get relative path from temp directory
-                relative_path = os.path.relpath(local_file_path, local_temp_dir)
-                s3_key = os.path.join(s3_key_prefix, relative_path).replace("\\", "/")
-                s3_manager.s3_client.upload_file(local_file_path, s3_manager.bucket_name, s3_key)
-
-    # For some reason the native aproach of DuckDB COPY command was too slow
-    # duckdb.sql(f"""
-    #     COPY silver_data TO '{silver_files_path_to_write}'
-    #     (FORMAT parquet, PARTITION_BY (city), OVERWRITE_OR_IGNORE);
-    #     """)
     # If you want to set location as country, state and city, you can use the following line
     # (FORMAT parquet, PARTITION_BY (country, state, city), OVERWRITE_OR_IGNORE);
 

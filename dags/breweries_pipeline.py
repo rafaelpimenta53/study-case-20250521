@@ -1,6 +1,6 @@
 from airflow import DAG
 from airflow.providers.docker.operators.docker import DockerOperator
-from datetime import datetime
+from datetime import datetime, timedelta
 
 with DAG(
     dag_id="breweries_pipeline",
@@ -18,6 +18,7 @@ with DAG(
         docker_url="unix://opt/airflow/docker.sock",
         env_file="./.env",
         mount_tmp_dir=False,
+        execution_timeout=timedelta(minutes=10),
     )
 
     silver = DockerOperator(
@@ -28,6 +29,7 @@ with DAG(
         docker_url="unix://opt/airflow/docker.sock",
         env_file="./.env",
         mount_tmp_dir=False,
+        execution_timeout=timedelta(minutes=180),
     )
 
     gold = DockerOperator(
@@ -38,6 +40,7 @@ with DAG(
         docker_url="unix://opt/airflow/docker.sock",
         env_file="./.env",
         mount_tmp_dir=False,
+        execution_timeout=timedelta(minutes=60),
     )
 
     bronze >> silver >> gold

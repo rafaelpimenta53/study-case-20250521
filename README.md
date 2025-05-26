@@ -18,7 +18,7 @@ This project implements a complete data pipeline following the **medallion archi
 
 ## Goal of the Application
 
-The primary goal of this application is to build a scalable, maintainable, and production-ready data pipeline that:
+The primary goal of this application is to build a pipeline for educational purposes.
 
 1. **Demonstrates Medallion Architecture**: Implements the three-layer approach (Bronze, Silver, Gold) for data processing
 2. **API Data Ingestion**: Collects raw data from the Open Brewery DB API and stores it with minimal processing
@@ -137,6 +137,7 @@ The primary goal of this application is to build a scalable, maintainable, and p
 ## Future Improvements
 
 ### Possible improvements
+- **Apply more data cleaning methods**: For example: trim every string and replace double spaces. I noted that there are countries starting with a blank space.
 - **Skip Gold Layer if Silver Unchanged**: Implement logic to detect if silver layer processed any changes and conditionally skip gold processing
 - **Compare results in Gold layer to Bronze metadata file**: agregates by city and location are included in the bronze metadata file
 - **Schema Evolution**: Support controlled schema changes without pipeline failures
