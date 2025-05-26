@@ -1,0 +1,22 @@
+# Global settings for the project
+local_data_path: "data"
+metadata_file_name: "breweries_metadata.json"
+brewery_page_filename_template: "breweries_page_{page_number}.json"
+last_run_metadata_bronze_path: "last_run_metadata.json"
+expected_bronze_schema:
+  id: UUID
+  name: VARCHAR
+  brewery_type: VARCHAR
+  address_1: VARCHAR
+  address_2: VARCHAR
+  address_3: VARCHAR
+  city: VARCHAR
+  state_province: VARCHAR
+  postal_code: VARCHAR
+  country: VARCHAR
+  longitude: DOUBLE
+  latitude: DOUBLE
+  phone: VARCHAR
+  website_url: VARCHAR
+  state: VARCHAR
+  street: VARCHAR
