@@ -2,17 +2,16 @@
 
 ## Table of Contents
 
-1. [Goal of the Application](#goal-of-the-application)
-2. [How to Run the Application](#how-to-run-the-application)
-3. [How it Works](#how-it-works)
+1. [How to Run the Application](#how-to-run-the-application)
+2. [How it Works](#how-it-works)
    - [Bronze Layer (Raw Data Ingestion)](#bronze-layer-raw-data-ingestion)
    - [Silver Layer (Data Cleansing & CDC)](#silver-layer-data-cleansing--cdc)
    - [Gold Layer (Business Aggregations)](#gold-layer-business-aggregations)
-4. [Monitoring/Alerting](#monitoringalerting)
-5. [Future Improvements](#future-improvements)
+3. [Monitoring/Alerting](#monitoringalerting)
+4. [Future Improvements](#future-improvements)
    - [Possible improvements](#possible-improvements)
    - [Infrastructure & DevOps](#infrastructure--devops)
-6. [Sample Results](#sample-results)
+5. [Sample Results](#sample-results)
    
 
 This project implements a complete data pipeline following the **medallion architecture** (Bronze, Silver, Gold layers) to process brewery data from the Open Brewery DB API. The pipeline demonstrates modern data engineering practices.
@@ -23,17 +22,6 @@ This project implements a complete data pipeline following the **medallion archi
 - **Docker** – Containerization of each stage
 - **AWS S3** – Data storage
 - **Apache Airflow** – Workflow scheduling and orchestration
-
-## Goal of the Application
-
-The primary goal of this application is to build a data pipeline for educational purposes.
-
-1. **Demonstrates Medallion Architecture**: Implements the three-layer approach (Bronze, Silver, Gold) for data processing
-2. **API Data Ingestion**: Collects raw data from the Open Brewery DB API and stores it with minimal processing
-3. **Data Quality & CDC**: Implements Change Data Capture (CDC) logic to track data inserts, updates and deletes
-4. **Business Intelligence**: Creates aggregated views for analytical purposes and reporting
-5. **Containerization**: Runs entirely in Docker containers for consistency across environments
-6. **Orchestration**: Uses Apache Airflow for workflow management and scheduling
 
 ## How to Run the Application
 
@@ -48,7 +36,7 @@ The primary goal of this application is to build a data pipeline for educational
   - Username: airflow
   - Password: airflow
  
-Folder Structure:
+**Main Files and Folder Structure:**
 
 ```
 project-root/
