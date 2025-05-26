@@ -12,6 +12,7 @@
 5. [Future Improvements](#future-improvements)
    - [Possible improvements](#possible-improvements)
    - [Infrastructure & DevOps](#infrastructure--devops)
+6. [Sample Results](#sample-results)
    
 
 This project implements a complete data pipeline following the **medallion architecture** (Bronze, Silver, Gold layers) to process brewery data from the Open Brewery DB API. The pipeline demonstrates modern data engineering practices using Python, Docker, AWS S3, and orchestration with Apache Airflow.
@@ -146,3 +147,9 @@ The primary goal of this application is to build a pipeline for educational purp
 ### Infrastructure & DevOps
 - **Complete IaC**: Finish Terraform implementation for ECS, EKS and Airflow deployment
 - **Cost Optimization**: Implement S3 lifecycle policies and resource usage monitoring
+
+
+## Sample Results
+
+![Sample Result by Brewery Type](documentation/Sample-Result-by-Bewery-Type.png)
+![Sample Result By State](documentation/Sample-Result-By-State.png)

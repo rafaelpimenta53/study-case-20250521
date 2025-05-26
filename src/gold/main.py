@@ -47,8 +47,8 @@ def create_gold_tables():
         """)
     logging.info("Table gold_data_brewery_type created successfully")
 
-    duckdb.sql("SELECT * FROM gold_data_location").show()
-    duckdb.sql("SELECT * FROM gold_data_brewery_type").show()
+    duckdb.sql("SELECT * FROM gold_data_location order by state").show()
+    duckdb.sql("SELECT * FROM gold_data_brewery_type order by brewery_type").show()
 
 
 def export_gold_tables(gold_files_path):
