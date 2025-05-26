@@ -19,7 +19,7 @@ This project implements a complete data pipeline following the **medallion archi
 
 ## Goal of the Application
 
-The primary goal of this application is to build a pipeline for educational purposes.
+The primary goal of this application is to build a data pipeline for educational purposes.
 
 1. **Demonstrates Medallion Architecture**: Implements the three-layer approach (Bronze, Silver, Gold) for data processing
 2. **API Data Ingestion**: Collects raw data from the Open Brewery DB API and stores it with minimal processing
@@ -28,18 +28,18 @@ The primary goal of this application is to build a pipeline for educational purp
 5. **Containerization**: Runs entirely in Docker containers for consistency across environments
 6. **Orchestration**: Uses Apache Airflow for workflow management and scheduling
 
-## How to Run the Application:
+## How to Run the Application
 
 - Clone repository: ```git clone -b dev https://github.com/rafaelpimenta53/study-case-20250521.git```
-- run ```cd study-case-20250521/```
-- Copy .env-sample to .env and fill AWS Keys and bucket-name
+- Run ```cd study-case-20250521/```
+- Copy .env-sample to .env and fill in AWS Keys and bucket name
 - Run the ```source run.sh``` script. It will:
-  - Start docker service, if not runing yet
+  - Start Docker service if not running yet
   - Build the images for the project
   - Start Airflow using Docker Compose
-- Open Airflow on http://localhost:8080/
-  - user: airflow
-  - password: airflow
+- Open Airflow at http://localhost:8080/
+  - Username: airflow
+  - Password: airflow
 
 ## How it Works
 
@@ -58,19 +58,19 @@ The primary goal of this application is to build a pipeline for educational purp
 **Processing Steps**:
 1. **Metadata Retrieval**: Fetches API metadata to determine total brewery count and calculate pagination
 2. **Paginated Data Collection**: Iterates through all API pages, fetching brewery data with retry logic
-3. **Raw Data Storage**: For each page: saves unprocessed JSON responses as text files
+3. **Raw Data Storage**: For each page, saves unprocessed JSON responses as text files
 4. **Metadata Creation**: Creates a metadata file indicating the timestamp directory of the current run
 
 **Outputs**:
 - **Raw JSON Files**:
   - `s3://<bucket>/bronze/YYYYMMDD-HHMMSS/metadata.json`: API metadata response
   - `s3://<bucket>/bronze/YYYYMMDD-HHMMSS/breweries_page_<N>.json`: Raw brewery data for each page
-  - `s3://<bucket>/bronze/last_run_metadata.json` name of the last directory created
+  - `s3://<bucket>/bronze/last_run_metadata.json`: Name of the last directory created
 
 **Validations**:
 - API request retry mechanism (configurable max retries and delay)
-  - When a retry is trigered it logs a warning, which can be monitored later 
-- If the API stops working in the middle of the data colection `last_run_metadata.json` will not be updated, which prevents incomplete data from being read.
+  - When a retry is triggered, it logs a warning which can be monitored later 
+- If the API stops working during data collection, `last_run_metadata.json` will not be updated, preventing incomplete data from being processed.
 
 ### Silver Layer (Data Cleansing & CDC)
 
@@ -84,8 +84,8 @@ The primary goal of this application is to build a pipeline for educational purp
 **Processing Steps**:
 1. **Data Loading**: 
    - Reads latest bronze JSON files into DuckDB `bronze_data` table
-   - Loads existing silver parquet files into DuckDB `silver_data` table (or creates if it doesn't exists)
-2. **Schema Validation**: Validates both bronze and silver tables against expected schemas. If there was a schema change it raises an error.
+   - Loads existing silver parquet files into DuckDB `silver_data` table (or creates it if it doesn't exist)
+2. **Schema Validation**: Validates both bronze and silver tables against expected schemas. If there is a schema change, it raises an error.
 3. **Change Detection**: Creates a diff table identifying:
    - `__new_record`: Records in bronze but not in silver
    - `__deleted_record`: Records in silver (active) but not in bronze
@@ -106,7 +106,7 @@ The primary goal of this application is to build a pipeline for educational purp
 **Validations**:
 - Strict schema validation (fails on column additions/removals or type mismatches)
 - CDC logic ensures data consistency and lineage tracking
-- Early exit if no changes detected between bronze and silver
+- Early exit if no changes are detected between bronze and silver
 
 ### Gold Layer (Business Aggregations)
 
@@ -129,25 +129,25 @@ The primary goal of this application is to build a pipeline for educational purp
 **Validations**:
 - Implicit validation through dependency on silver layer data quality
 
-## Monitoring/Alerting:
-- **Monitoring Errors and Warnings from AWS Cloudwatch**: Airflow suports sending logs to Cloudwatch, so it is possible to create dashboards for monitor records obtained, warnings and set up email alerts for when errors are logged.
-- **Data Quality**: Data tests can be implemented with DBT or Great Expectations to run some tests. Example:
-  - Test that the column "Name" is never NULL
+## Monitoring/Alerting
+
+- **Monitor Errors and Warnings from AWS CloudWatch**: Airflow supports sending logs to CloudWatch, making it possible to create dashboards for monitoring records obtained, warnings, and set up email alerts when errors are logged.
+- **Data Quality**: Data tests can be implemented with dbt or Great Expectations to run various tests. Examples:
+  - Test that the "Name" column is never NULL
   - Test that columns are not 100% NULL
 
 ## Future Improvements
 
-### Possible improvements
-- **Apply more data cleaning methods**: For example: trim every string and replace double spaces. I noted that there are countries starting with a blank space.
-- **Skip Gold Layer if Silver Unchanged**: Implement logic to detect if silver layer processed any changes and conditionally skip gold processing
-- **Compare results in Gold layer to Bronze metadata file**: agregates by city and location are included in the bronze metadata file
+### Possible Improvements
+- **Apply more data cleaning methods**: For example, trim every string and replace double spaces. I noticed that there are countries starting with a blank space.
+- **Skip Gold Layer if Silver Unchanged**: Implement logic to detect if the silver layer processed any changes and conditionally skip gold processing
+- **Compare results in Gold layer to Bronze metadata file**: Aggregates by city and location are included in the bronze metadata file
 - **Schema Evolution**: Support controlled schema changes without pipeline failures
-- **Investigate slowness of DuckDB COPY command**: The workaround that was implemented instead is not very eficient
+- **Investigate slowness of DuckDB COPY command**: The workaround that was implemented instead is not very efficient
 
 ### Infrastructure & DevOps
-- **Complete IaC**: Finish Terraform implementation for ECS, EKS and Airflow deployment
+- **Complete IaC**: Finish Terraform implementation for ECS, EKS, and Airflow deployment
 - **Cost Optimization**: Implement S3 lifecycle policies and resource usage monitoring
-
 
 ## Sample Results
 

@@ -2,6 +2,11 @@ from airflow import DAG
 from airflow.providers.docker.operators.docker import DockerOperator
 from datetime import datetime, timedelta
 
+default_args = {
+    "retries": 2,
+    "retry_delay": timedelta(minutes=2),
+}
+
 with DAG(
     dag_id="breweries_pipeline",
     start_date=datetime(2025, 5, 23),
@@ -9,6 +14,7 @@ with DAG(
     catchup=False,
     tags=["medallion", "pipeline", "breweries", "study", "case"],
     max_active_runs=1,
+    default_args=default_args,
 ) as dag:
     bronze = DockerOperator(
         task_id="bronze_stage",
