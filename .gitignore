@@ -34,3 +34,5 @@ secrets/aws_accessKeys.csv
 logs/
 config/
 plugins/
+
+src/silver/temp/*.parquet

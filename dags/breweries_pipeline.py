@@ -8,6 +8,7 @@ with DAG(
     schedule="@daily",
     catchup=False,
     tags=["medallion", "pipeline", "breweries", "study", "case"],
+    max_active_runs=1,
 ) as dag:
     bronze = DockerOperator(
         task_id="bronze_stage",

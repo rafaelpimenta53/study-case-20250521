@@ -140,6 +140,7 @@ The primary goal of this application is to build a scalable, maintainable, and p
 - **Skip Gold Layer if Silver Unchanged**: Implement logic to detect if silver layer processed any changes and conditionally skip gold processing
 - **Compare results in Gold layer to Bronze metadata file**: agregates by city and location are included in the bronze metadata file
 - **Schema Evolution**: Support controlled schema changes without pipeline failures
+- **Investigate slowness of DuckDB COPY command**: The workaround that was implemented instead is not very eficient
 
 ### Infrastructure & DevOps
 - **Complete IaC**: Finish Terraform implementation for ECS, EKS and Airflow deployment
