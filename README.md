@@ -47,6 +47,28 @@ The primary goal of this application is to build a data pipeline for educational
 - Open Airflow at http://localhost:8080/
   - Username: airflow
   - Password: airflow
+ 
+Folder Structure:
+
+```
+project-root/
+├── src/
+│   ├── bronze/
+│   │   ├── main.py
+│   │   ├── Dockerfile
+│   │   └── settings.yaml
+│   ├── silver/
+│   │   ├── main.py
+│   │   └── Dockerfile
+│   ├── gold/
+│   │   ├── main.py
+│   │   └── Dockerfile
+│   └── config/
+│       └── project-settings.yaml
+├── .env
+└── run.sh
+```
+
 
 ## How it Works
 
